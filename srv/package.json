@@ -1,0 +1,9 @@
+{
+  "name": "matoorqa-push",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "web-push": "^3.6.7"
+  }
+}
