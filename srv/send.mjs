@@ -8,7 +8,7 @@ const SUBJECT = 'https://marcelgraphicsite.github.io/matoorqa/';
 const DAY = 864e5;
 const MATURA = Date.UTC(2027, 4, 4) / DAY;
 const hsh = t => { let x = 0; for (const c of String(t)) x = (x * 31 + c.charCodeAt(0)) >>> 0; return x; };
-const QUIET_FROM = 22, QUIET_TO = 8, PER_RUN = 2, PER_DAY = 6;
+const QUIET_FROM = 22, QUIET_TO = 8, PER_RUN = 2, PER_DAY = 9;
 
 const plf = (n, a, b, c) => { n = Math.abs(n); if (n === 1) return a; const d = n % 10, h = n % 100; return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? b : c; };
 const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
@@ -29,6 +29,27 @@ export function local(now, tz) {
   const g = t => +p.find(x => x.type === t).value;
   return { day: Math.floor(Date.UTC(g('year'), g('month') - 1, g('day')) / DAY), h: g('hour') };
 }
+
+// plan dnia ze stanu: cel, przedmioty (grupy) i które już zaliczone
+const GRS = { pol: ['pol'], mat: ['matp', 'matr'], ang: ['angp', 'angr'], geo: ['geo'] };
+const GRN = { pol: 'polski', mat: 'matma', ang: 'angielski', geo: 'geografia' };
+function plan(S, day) {
+  if (!S || !S.set) return null;
+  const g = +S.set.goal || 60, subs = S.set.subs || [], sep = !(S.set.gsep === false || S.set.gsep === 0);
+  const grs = Object.keys(GRS).filter(k => GRS[k].some(x => subs.includes(x))), x = (S.dx || {})[day] || {};
+  return { g, sep: sep && grs.length > 1, grs, done: grs.filter(k => (+x[k] || 0) >= g), todo: grs.filter(k => (+x[k] || 0) < g) };
+}
+// zaległości: słówka z terminem na dziś, otwarte błędy, powtórki zadań z banku
+function dues(S, day) {
+  if (!S) return { fc: 0, mi: 0, rv: 0 };
+  const fc = Object.values(S.fc || {}).filter(r => Array.isArray(r) && +r[1] <= day).length;
+  const seen = new Set(); let mi = 0;
+  for (const m of Array.isArray(S.mist) ? S.mist : []) { if (!m || seen.has(m.i)) continue; seen.add(m.i); if (!m.fx) mi++; }
+  const rv = Object.keys(S.q || {}).filter(id => !/^(g|ai):/.test(id) && Array.isArray(S.q[id]) && +S.q[id][1] <= day).length;
+  return { fc, mi, rv };
+}
+const mins = (n, s) => Math.max(2, Math.round(n * s / 60));
+const lst = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' i ' + a[a.length - 1];
 
 // stan dnia z dokumentu social (albo z pełnego stanu, gdy ktoś nie ma nicku)
 function today(x, day) {
@@ -51,7 +72,7 @@ function fromState(S, day) {
 
 // co wysłać jednej osobie; m.set to zmiana stanu, zapisywana dopiero po udanej wysyłce
 export function events(p, soc, st, my, ctx) {
-  const { day, h, H, now, S } = ctx, out = [], me = soc[p] || null, wk = weekIdx(day);
+  const { day, h, H, now, S } = ctx, F = ctx.F || 2, out = [], me = soc[p] || null, wk = weekIdx(day);
   const xw = x => x && x.wk === wk ? (+x.xw || 0) : 0;
   // 1. wyzwania na pojedynek
   let top = 0, hit = null;
@@ -102,6 +123,14 @@ export function events(p, soc, st, my, ctx) {
       }
     }
     st.lg = { wk, ab: above };
+    // 4b. niedziela 16–20: liga kończy się o północy
+    if (F >= 2 && (day + 3) % 7 === 6 && h >= 16 && h <= 20 && st.lk !== wk && rows.some(r => r.xw > 0)) {
+      const pos = rows.findIndex(r => r.k === p) + 1;
+      if (pos === 1) { const g2 = mx - rows[1].xw, h2 = soc[rows[1].k].h;
+        out.push({ t: 'Prowadzisz w lidze. Finał dziś o północy', b: g2 <= 150 ? `@${h2} traci tylko ${fmtN(g2)} XP. Jedna lekcja i masz spokój.` : `Przewaga ${fmtN(g2)} XP nad @${h2}. Utrzymaj ją do północy.`, u: '#znajomi', g: 'liga', set: { lk: wk } }); }
+      else { const g2 = rows[pos - 2].xw - mx + 1;
+        out.push({ t: 'Liga kończy się dziś o północy', b: `Jesteś ${pos}. Do ${pos - 1}. miejsca brakuje ${fmtN(g2)} XP${g2 <= 150 ? ', czyli jednej lekcji' : ''}.`, u: '#znajomi', g: 'liga', set: { lk: wk } }); }
+    }
     // 5. cel ekipy zrobiony
     const team = [p, ...fr];
     if (team.length >= 2 && st.tg !== wk) {
@@ -110,43 +139,101 @@ export function events(p, soc, st, my, ctx) {
       if (sum >= tg) out.push({ t: 'Ekipa dowiozła cel tygodnia', b: `${fmtN(sum)} XP razem przy celu ${fmtN(tg)}. Dobra robota.`, u: '#znajomi', g: 'ekipa', set: { tg: wk } });
     }
     // 6. pytanie dnia: ktoś z ekipy już odpowiedział
-    if (st.qd !== day && h >= 12 && h < 21 && !(me.qd && +me.qd.d === day)) {
+    if (F >= 2 && st.qd !== day && h >= 12 && h < 21 && !(me.qd && +me.qd.d === day)) {
       const best = fr.map(k => soc[k]).filter(x => x.qd && +x.qd.d === day && x.qd.ok).sort((a, b) => a.qd.ms - b.qd.ms)[0];
       if (best) out.push({ t: `Pytanie dnia: @${best.h} w ${sec(best.qd.ms)}`, b: 'To samo pytanie czeka na ciebie. Pobijesz ten czas?', u: '#start', g: 'qd', set: { qd: day } });
     }
   }
-  // 6b. powtórka z wczoraj (5–7 pytań kontrolnych), po południu, gdy jeszcze nie zrobiona
-  if (S && st.rcp !== day && S.rc !== day && h >= 13 && h < 20) {
-    const y = (S.al || {})[day - 1], n = Math.min(7, y && y.length ? new Set(y.map(x => x[0])).size : Object.values(S.q || {}).filter(r => Array.isArray(r) && r[4] === day - 1).length);
-    if (n >= 3) { const m = Math.max(2, Math.round(n * .5)), pq = `${n} ${plf(n, 'pytanie', 'pytania', 'pytań')}`;
-      out.push({ ...[{ t: 'Ile zostało z wczoraj?', b: `${n} ${plf(n, 'pytanie kontrolne', 'pytania kontrolne', 'pytań kontrolnych')} z wczorajszej nauki. Ok. ${m} min.` }, { t: 'Szybki test z wczoraj', b: `${cap(pq)}, żeby nic nie uciekło. Ok. ${m} min.` }][(day + hsh(p)) % 2], u: '#start', g: 'recap', set: { rcp: day } }); }
-  }
-  // 7. przypomnienie o wybranej godzinie (teksty zmieniają się co dzień), 8. ostatni dzwonek o 21
+  // 7. przypomnienia: rano, w południe, o wybranej godzinie, dogrywka, ostatni dzwonek.
+  //    F: 1 = mało (godzina + ostatni dzwonek), 2 = normalnie, 3 = dużo. Najwyżej jedno na przebieg, z odstępami.
   const pick = arr => { arr = arr.filter(Boolean); return arr[(day + hsh(p)) % arr.length]; };
+  if (!st.rn || st.rn.d !== day) st.rn = { d: day, n: 0 };
+  const CAP = [0, 0, 5, 6][F], room = st.rn.n < CAP, since = now - (st.lt || 0);
+  const nm = my && my.n ? String(my.n).split(' ')[0] : '', dm = MATURA - day;
+  const idle = my && my.last != null ? day - my.last : 99, done = my ? isDone(my) : true;
+  const P = plan(S, day), gap = my ? fmtN(left(my)) : '';
+  const planTxt = P && P.sep ? `${P.g} XP z każdego z ${P.grs.length} przedmiotów` : `${P ? P.g : my ? my.g : 60} XP`;
+  let R = null;
+  const rem = (o, set) => { const { set: s0, ...rest } = o; R = { ...rest, u: rest.u || '#start', set: { ...(s0 || {}), ...set, lt: now, rn: { d: day, n: st.rn.n + 1 } } }; };
+  // 7a. o wybranej godzinie (zawsze, poza osobami, które olewają apkę)
   if (my && st.rd !== day && h >= H) {
-    const gap = fmtN(left(my)), dm = MATURA - day, nm = my.n ? String(my.n).split(' ')[0] : '', idle = my.last == null ? 0 : day - my.last;
-    if (isDone(my)) st.rd = day;
-    else if (idle >= 6 && st.pa !== my.last) out.push({ t: 'Te przypomnienia chyba nie działają', b: 'Od teraz piszę co trzy dni. Apka czeka, wracaj kiedy chcesz.', u: '#start', g: 'seria', set: { rd: day, rt: now, pa: my.last } });
+    if (done) st.rd = day;
+    else if (idle >= 6 && st.pa !== my.last) rem({ t: 'Te przypomnienia chyba nie działają', b: 'Od teraz piszę co trzy dni. Apka czeka, wracaj kiedy chcesz.', g: 'seria' }, { rd: day, rt: now, pa: my.last });
     else if (idle >= 6 && idle % 3) st.rd = day;
-    else out.push({ ...pick(my.st > 0 ? [
+    else rem({ ...pick(my.st > 0 ? [
       { t: `Seria ${dni(my.st)} czeka na dziś`, b: `Do celu brakuje ${gap} XP. Jedna lekcja to ok. 5 minut.` },
       { t: `Scrollowanie poczeka. Seria ${dni(my.st)} nie`, b: `Do celu ${gap} XP. 5 minut i wracasz do filmików.` },
-      { t: `${nm ? nm + ', s' : 'S'}eria ${dni(my.st)} wisi na włosku`, b: `Brakuje ${gap} XP. Jedna lekcja i po sprawie.` },
+      { t: `${nm ? nm + ', s' : 'S'}eria ${dni(my.st)} wisi na włosku`, b: `Brakuje ${gap} XP. Zacznij od jednej lekcji.` },
       { t: 'Matura nie przewinie się sama', b: `Seria ${dni(my.st)}, do celu ${gap} XP. Odpal jedną lekcję.` },
-      dm > 0 && { t: `Do matury ${dni(dm)}`, b: `Seria ${dni(my.st)} czeka. ${gap} XP i dzień zaliczony.` },
+      dm > 0 && { t: `Do matury ${dni(dm)}`, b: `Seria ${dni(my.st)} czeka. Do celu ${gap} XP.` },
     ] : [
       { t: 'Dzisiejszy cel czeka', b: `Do celu ${gap} XP. Jedna lekcja to ok. 5 minut.` },
       { t: `${nm ? nm + ', z' : 'Z'}acznij serię dziś`, b: 'Jedna lekcja i masz dzień 1. Reszta przyjdzie sama.' },
       dm > 0 && { t: `Do matury ${dni(dm)}`, b: 'Każdy dzień się liczy. 5 minut wystarczy na start.' },
       { t: 'Telefon w ręku? Idealny moment', b: `Jedna lekcja, ok. 5 minut. Do celu ${gap} XP.` },
-    ]), u: '#start', g: 'seria', set: { rd: day, rt: now } });
-  } else if (my && st.rd === day && st.rl !== day && h >= 21 && my.st >= 2 && !isDone(my) && now - (st.rt || 0) >= 2 * 36e5) {
-    out.push({ ...pick([
+    ]), g: 'seria' }, { rd: day, rt: now });
+  }
+  // 7b. rano (8–10): ważne dni przy F = 2, codziennie przy F = 3
+  if (!R && room && F >= 2 && st.ra !== day && h >= 8 && h <= 10 && my && idle <= 3 && !done) {
+    const MS = [200, 150, 120, 100, 90, 75, 60, 50, 45, 40, 35, 30, 25, 21, 14, 10, 7, 6, 5, 4, 3, 2, 1];
+    const SM = [3, 7, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365];
+    const c = dues(S, day);
+    let o = null;
+    if (dm > 0 && MS.includes(dm)) o = { t: `Do matury ${dni(dm)}`, b: dm <= 7 ? 'Ostatnia prosta. Dziś powtórki, nie nowy materiał.' : dm >= 100 ? `Brzmi jak dużo, ale każdy dzień się liczy. Plan na dziś: ${planTxt}.` : `To już blisko. Plan na dziś: ${planTxt}.` };
+    else if (SM.includes(my.st) && st.ms !== my.st) o = { t: `${dni(my.st)} z rzędu`, b: `Dziś dzień ${my.st + 1}. ${my.st >= 30 ? 'To już nawyk, nie wysiłek.' : 'Nie przerywaj teraz.'}`, set: { ms: my.st } };
+    else if (my.st === 0 && idle === 2) o = { t: 'Wczoraj przerwa. Dziś wracasz?', b: 'Nowa seria zaczyna się od jednej lekcji. Ok. 5 minut.' };
+    else if ((day + 3) % 7 === 0 && fr.length) o = { t: 'Nowy tydzień w lidze', b: 'Wszyscy startują od zera. Pierwsza lekcja daje prowadzenie.', u: '#znajomi' };
+    else if (F >= 3) o = pick([
+      { t: nm ? `Dzień dobry, ${nm}` : 'Dzień dobry', b: `Plan na dziś: ${planTxt}. Rano idzie najszybciej.` },
+      { t: 'Kawa i jedna lekcja?', b: `5 minut teraz i wieczór masz luźniejszy. Cel: ${planTxt}.` },
+      { t: 'Zanim dzień się rozkręci', b: `Jedna lekcja rano i masz spokojniejszą głowę. Cel: ${planTxt}.` },
+      c.fc >= 5 && { t: `${c.fc} ${plf(c.fc, 'słówko czeka', 'słówka czekają', 'słówek czeka')} od rana`, b: `Powtórka zajmie ok. ${mins(c.fc, 10)} min. W sam raz na drogę do szkoły.`, u: '#slowka' },
+    ]);
+    if (o) rem({ g: 'rano', ...o }, { ra: day });
+  }
+  // 7c. w południe (12 do 2 h przed wybraną godziną): powtórka z wczoraj, potem słówka, błędy, powtórki
+  const mid = h >= 12 && h <= Math.min(16, H - 2);
+  if (!R && room && F >= 2 && mid && S && st.rcp !== day && S.rc !== day && since >= 2 * 36e5) {
+    const y = (S.al || {})[day - 1], n = Math.min(7, y && y.length ? new Set(y.map(x => x[0])).size : Object.values(S.q || {}).filter(r => Array.isArray(r) && r[4] === day - 1).length);
+    if (n >= 3) { const m = Math.max(2, Math.round(n * .5)), pq = `${n} ${plf(n, 'pytanie', 'pytania', 'pytań')}`;
+      rem({ ...[{ t: 'Ile zostało z wczoraj?', b: `${n} ${plf(n, 'pytanie kontrolne', 'pytania kontrolne', 'pytań kontrolnych')} z wczorajszej nauki. Ok. ${m} min.` }, { t: 'Szybki test z wczoraj', b: `${cap(pq)}, żeby nic nie uciekło. Ok. ${m} min.` }][(day + hsh(p)) % 2], g: 'recap' }, { rcp: day }); }
+  }
+  if (!R && room && F >= 2 && mid && S && st.pw !== day && !done && idle <= 3 && since >= 2 * 36e5 && (F >= 3 || st.rcp !== day)) {
+    const c = dues(S, day);
+    const o = [
+      c.fc >= 5 && { m: mins(c.fc, 10), t: `${c.fc} ${plf(c.fc, 'słówko', 'słówka', 'słówek')} do powtórki`, b: `Ich termin to dziś. Ok. ${mins(c.fc, 10)} min i wracają do pamięci.`, u: '#slowka' },
+      c.mi >= 3 && { m: mins(c.mi, 40), t: `${c.mi} ${plf(c.mi, 'błąd', 'błędy', 'błędów')} do poprawy`, b: `Każdy poprawiony znika z listy. Ok. ${mins(c.mi, 40)} min.` },
+      c.rv >= 5 && { m: mins(c.rv, 40), t: `${c.rv} ${plf(c.rv, 'zadanie', 'zadania', 'zadań')} do powtórki`, b: `Powtórka utrwala to, co już umiesz. Ok. ${mins(Math.min(c.rv, 20), 40)} min.` },
+    ].filter(Boolean).sort((a, b) => b.m - a.m)[0];
+    if (o) rem({ t: o.t, b: o.b, u: o.u, g: 'powt' }, { pw: day });
+  }
+  // 7d. dogrywka: 2 h po przypomnieniu, najpóźniej przed 20, gdy cel dalej niezrobiony
+  if (!R && room && F >= 2 && my && st.rd === day && st.r2 !== day && !done && idle <= 3 && h <= 19 && since >= 2 * 36e5) {
+    let o;
+    if (P && P.sep && P.done.length && P.todo.length) {
+      const fem = k => k === 'mat' || k === 'geo', D = P.done, T = P.todo;
+      o = { t: `${cap(lst(D.map(k => GRN[k])))} ${D.length > 1 ? 'zaliczone' : fem(D[0]) ? 'zaliczona' : 'zaliczony'}`, b: `${T.length > 1 ? 'Zostały' : fem(T[0]) ? 'Została' : 'Został'} ${lst(T.map(k => GRN[k]))}. Do pełnego celu brakuje ${gap} XP.` };
+    } else if (my.td > 0) o = pick([
+      { t: `Dobry start: ${fmtN(my.td)} XP dziś`, b: `Dociśnij do celu. Brakuje ${gap} XP.` },
+      { t: 'Jeszcze kawałek', b: `Do dzisiejszego celu ${gap} XP. Jedna, dwie lekcje.` },
+    ]);
+    else o = pick([
+      { t: 'Jeszcze ani jednej lekcji dziś', b: 'Dzień ucieka. Zacznij od jednej lekcji, ok. 5 minut.' },
+      { t: 'Halo, matura sama się nie zda', b: `Do celu ${gap} XP. Jedna lekcja na rozgrzewkę.` },
+      { t: 'To tylko 5 minut', b: 'Mniej niż jeden odcinek serialu. Odpal lekcję.' },
+    ]);
+    rem({ ...o, g: 'seria' }, { r2: day });
+  }
+  // 7e. ostatni dzwonek o 21, gdy seria trwa, a cel niezrobiony (każdy poziom)
+  if (!R && my && st.rd === day && st.rl !== day && h >= 21 && my.st >= 1 && !done && since >= 1.5 * 36e5) {
+    rem({ ...pick([
       { t: `Ostatni dzwonek: seria ${dni(my.st)}`, b: `Do północy ${24 - h} h. Jedna lekcja ratuje serię.` },
       { t: `Seria ${dni(my.st)} zaraz przepadnie`, b: `Zostały ${24 - h} h. 5 minut przed snem i jest uratowana.` },
-    ]), u: '#start', g: 'seria', set: { rl: day } });
+      { t: `Seria ${dni(my.st)}: zostały ${24 - h} h`, b: 'Jedna lekcja przed snem i seria leci dalej.' },
+    ]), g: 'seria' }, { rl: day });
   }
-  return out.sort((a, b) => (a.g === 'seria' ? 0 : 1) - (b.g === 'seria' ? 0 : 1));
+  if (R) out.unshift(R);
+  return out;
 }
 
 export async function main({ db, send, now = Date.now(), log = console.log, test = false }) {
@@ -163,7 +250,7 @@ export async function main({ db, send, now = Date.now(), log = console.log, test
     if (!pp || !pp.parent || pp.parent.id !== 'push') continue;
     const x = d.data(); let s; try { s = JSON.parse(x.s); } catch (e) { continue; }
     if (!s || !s.endpoint) continue;
-    (subs[pp.id] = subs[pp.id] || []).push({ ref: d.ref, s, h: Math.min(23, Math.max(0, +x.h || 18)), tz: x.tz || 'Europe/Warsaw' });
+    (subs[pp.id] = subs[pp.id] || []).push({ ref: d.ref, s, h: Math.min(23, Math.max(0, +x.h || 18)), tz: x.tz || 'Europe/Warsaw', f: Math.min(3, Math.max(1, Math.round(+x.f) || 2)), at: +x.at || 0 });
   }
   const people = Object.keys(subs), R = { osoby: people.length, urzadzenia: 0, wyslane: 0, usuniete: 0, bledy: 0 };
   if (!people.length) return R;
@@ -187,7 +274,7 @@ export async function main({ db, send, now = Date.now(), log = console.log, test
       const S = dec((await db.doc('data/users/' + p + '/state').get()).data());
       let my = soc[p] ? today(soc[p], day) : null;
       if (!my) my = fromState(S, day);
-      const msgs = st.c.n < PER_DAY ? events(p, soc, st, my, { day, h, H: Math.min(...L.map(x => x.h)), now, S }).slice(0, Math.min(PER_RUN, PER_DAY - st.c.n)) : [];
+      const msgs = st.c.n < PER_DAY ? events(p, soc, st, my, { day, h, H: Math.min(...L.map(x => x.h)), F: L.reduce((a, b) => b.at > a.at ? b : a).f, now, S }).slice(0, Math.min(PER_RUN, PER_DAY - st.c.n)) : [];
       for (const m of msgs) {
         let ok = false;
         for (const x of L) {
