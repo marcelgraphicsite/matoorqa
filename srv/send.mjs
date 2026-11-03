@@ -8,7 +8,9 @@ const SUBJECT = 'https://marcelgraphicsite.github.io/matoorqa/';
 const DAY = 864e5;
 const MATURA = Date.UTC(2027, 4, 4) / DAY;
 const hsh = t => { let x = 0; for (const c of String(t)) x = (x * 31 + c.charCodeAt(0)) >>> 0; return x; };
-const QUIET_FROM = 22, QUIET_TO = 8, PER_RUN = 2, PER_DAY = 9;
+const QUIET_FROM = 22, QUIET_TO = 8, PER_RUN = 2, PER_DAY = 9, NZ_DAY = 4;
+// cel ekipy: z każdym tygodniem ligi +500 XP (tydzień 1 zaczyna się 2 listopada 2026), tak samo jak w apce
+const TEAM_W0 = 2966, TEAM_STEP = 500;
 
 const plf = (n, a, b, c) => { n = Math.abs(n); if (n === 1) return a; const d = n % 10, h = n % 100; return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? b : c; };
 const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
@@ -92,11 +94,13 @@ export function events(p, soc, st, my, ctx) {
   for (const k in soc) {
     if (k === p) continue;
     const v = (soc[k].nz || {})[p];
-    if (Array.isArray(v) && +v[0] > (st.nz || 0) && now - v[0] < DAY && +v[0] > top) { top = +v[0]; hit = { h: soc[k].h, typ: v[1] }; }
+    if (Array.isArray(v) && +v[0] > (st.nz || 0) && now - v[0] < 12 * 36e5 && +v[0] > top) { top = +v[0]; hit = { h: soc[k].h, typ: v[1] }; }
   }
+  if (hit && (!st.nzc || st.nzc.d !== day)) st.nzc = { d: day, n: 0 };
+  if (hit && st.nzc.n >= NZ_DAY) { st.nz = top; hit = null; }
   if (hit) out.push(hit.typ === 'h'
-      ? { t: `Piątka od @${hit.h}`, b: 'Za dzisiejszy cel. Tak trzymaj.', u: '#start', g: 'soc', set: { nz: top } }
-      : { t: `@${hit.h} cię szturcha`, b: my && !isDone(my) ? `Do celu brakuje ${fmtN(left(my))} XP. Jedna lekcja i po sprawie.` : 'Ekipa się uczy. Wpadnij na jedną lekcję.', u: '#start', g: 'soc', set: { nz: top } });
+      ? { t: `Piątka od @${hit.h}`, b: 'Za dzisiejszy cel. Tak trzymaj.', u: '#start', g: 'soc', set: { nz: top, nzc: { d: day, n: st.nzc.n + 1 } } }
+      : { t: `@${hit.h} cię szturcha`, b: my && !isDone(my) ? `Do celu brakuje ${fmtN(left(my))} XP. Jedna lekcja i po sprawie.` : 'Ekipa się uczy. Wpadnij na jedną lekcję.', u: '#start', g: 'soc', set: { nz: top, nzc: { d: day, n: st.nzc.n + 1 } } });
   // 3. wyniki moich wyzwań
   if (me && me.du) {
     top = 0; hit = null;
@@ -136,7 +140,8 @@ export function events(p, soc, st, my, ctx) {
     if (team.length >= 2 && st.tg !== wk) {
       let sum = 0, tg = 0;
       for (const k of team) { sum += xw(soc[k]); tg += Math.max(20, +soc[k].g || 60) * 5; }
-      if (sum >= tg) out.push({ t: 'Ekipa dowiozła cel tygodnia', b: `${fmtN(sum)} XP razem przy celu ${fmtN(tg)}. Dobra robota.`, u: '#znajomi', g: 'ekipa', set: { tg: wk } });
+      tg += TEAM_STEP * Math.max(0, wk - TEAM_W0);
+      if (sum >= tg) out.push({ t: 'Ekipa dowiozła cel tygodnia', b: `${fmtN(sum)} XP razem przy celu ${fmtN(tg)}. W przyszłym tygodniu cel rośnie o ${TEAM_STEP} XP.`, u: '#znajomi', g: 'ekipa', set: { tg: wk } });
     }
     // 6. pytanie dnia: ktoś z ekipy już odpowiedział
     if (F >= 2 && st.qd !== day && h >= 12 && h < 21 && !(me.qd && +me.qd.d === day)) {
