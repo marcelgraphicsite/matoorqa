@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>matoorqa</title>
+<meta name="description" content="matoorqa: matura 2027 krok po kroku.">
+<meta name="theme-color" content="#07080B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="matoorqa">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..700&family=Nunito:wght@700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap">
+<style id="mq-ls">
+html,body{margin:0;background:#07080B;color:#F3F2EF}
+#mq-lock{--acc:#E8B86A;--fg:#F3F2EF;--fg2:#A3A7AE;--fg3:#6F747D;--line:rgba(255,255,255,.1);--bad:#FF8A80;--ok:#8BE3B2;
+  min-height:100vh;min-height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  font:16px/1.5 'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  background:radial-gradient(120% 70% at 50% 0%,rgba(232,184,106,.13),transparent 60%),#07080B}
+#mq-lock *{box-sizing:border-box}
+.lk{width:100%;max-width:380px;display:flex;flex-direction:column;gap:18px;text-align:center}
+.lk-logo{width:84px;height:84px;margin:0 auto;border-radius:22px;box-shadow:0 18px 40px -16px rgba(232,184,106,.45)}
+.lk h1{font:900 34px/1.1 Nunito,'Hanken Grotesk',sans-serif;letter-spacing:-.02em;margin:4px 0 0}
+.lk .sub{color:var(--fg2);margin:-8px 0 4px}
+.lk label{display:block;text-align:left;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);margin-bottom:8px}
+.lk input{width:100%;height:56px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--fg);
+  font:600 18px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-align:center;text-transform:uppercase;padding:0 12px;outline:none}
+.lk input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(232,184,106,.2)}
+.lk-btn{height:54px;width:100%;border:0;border-radius:16px;background:var(--acc);color:#1A1206;font:800 17px/1 Nunito,'Hanken Grotesk',sans-serif;cursor:pointer;letter-spacing:.01em}
+.lk-btn:disabled{opacity:.55;cursor:default}
+.lk-btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.lk-msg{min-height:22px;font-size:15px;color:var(--bad)}
+.lk-msg.ok{color:var(--ok)}
+.lk-note{font-size:14px;color:var(--fg3);line-height:1.5}
+.lk-card{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:18px;padding:16px 16px;display:flex;flex-direction:column;gap:10px}
+.lk-card b{color:var(--fg)}
+.lk-card ol{margin:0;padding-left:20px;color:var(--fg2)}
+.lk-card li{margin:4px 0}
+.lk-codes{display:flex;flex-direction:column;gap:8px}
+.lk-code{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04)}
+.lk-code span{flex:1;min-width:0;font:600 15px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;text-align:left;overflow-wrap:anywhere}
+.lk-code small{display:block;font:500 12px/1.2 'Hanken Grotesk',sans-serif;color:var(--fg3);letter-spacing:0;margin-bottom:3px}
+.lk-code button{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:10px;padding:8px 10px;font:700 13px/1 'Hanken Grotesk',sans-serif;cursor:pointer}
+.lk-spin{width:30px;height:30px;margin:0 auto;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--acc);animation:lkr .8s linear infinite}
+@keyframes lkr{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="mq-lock"><div class="lk"><div class="lk-spin" aria-label="Wczytuję"></div></div></div>
+<script src="fb.js"></script>
+<script>
+(function(){
+const VER='0cb4796eb0e0';
+const $=s=>document.querySelector(s);
+const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
+const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const rnd=n=>crypto.getRandomValues(new Uint8Array(n));
+function newCode(){const b=rnd(20);let s='';for(let i=0;i<20;i++){s+=ALPH[b[i]&31];if(i%4===3&&i<19)s+='-'}return s}
+const normCode=c=>String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const prettyCode=c=>normCode(c).replace(/(.{4})(?=.)/g,'$1-');
+const newPid=()=>'p'+[...rnd(10)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function hash(code){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('mq1:'+normCode(code)));return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+const b64d=s=>{s=String(s).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+const inApp=()=>/FBAN|FBAV|Instagram|Messenger|Snapchat|TikTok|Line\//i.test(navigator.userAgent);
+async function copy(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
+window.MQL={newCode,normCode,prettyCode,newPid,hash,copy,isIOS,isStandalone};
+
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e;const b=$('#lk-inst');if(b)b.hidden=false});
+if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+
+async function openPayload(k){
+  let buf;
+  try{const r=await fetch('app.bin?v='+VER,{cache:'no-cache'});if(!r.ok)throw new Error('http '+r.status);buf=new Uint8Array(await r.arrayBuffer())}
+  catch(e){const x=new Error('net');x.net=true;throw x}
+  const key=await crypto.subtle.importKey('raw',b64d(k),'AES-GCM',false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12));
+  const txt=await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  return JSON.parse(txt);
+}
+function launch(P){
+  const st=document.createElement('style');st.textContent=P.css;document.head.appendChild(st);
+  const L=$('#mq-lock');if(L)L.remove();const LS0=document.getElementById('mq-ls');if(LS0)LS0.remove();
+  document.body.insertAdjacentHTML('afterbegin',P.body);
+  const s=document.createElement('script');s.textContent=P.js;document.body.appendChild(s);
+}
+const errTxt=e=>{const c=e&&(e.code||e.message)||'';
+  if(e&&e.net||/unavailable|network|offline|failed to fetch/i.test(c))return'Brak internetu. Połącz się i spróbuj jeszcze raz.';
+  if(/permission/i.test(c))return'Ten kod został już użyty. Poproś o nowy.';
+  return'Coś poszło nie tak. Spróbuj za chwilę.'};
+
+async function claim(raw){
+  const code=normCode(raw);
+  if(code.length!==20){const x=new Error('len');x.msg='Kod ma 20 znaków. Sprawdź, czy przepisałeś całość.';throw x}
+  const inv=await hash(code);
+  const uid=await MQFB.ready();
+  const d=await MQFB.get('invites/'+inv);
+  if(!d.exists){const x=new Error('nocode');x.msg='Nie ma takiego kodu. Sprawdź, czy nie ma literówki.';throw x}
+  const v=d.data,uids=Array.isArray(v.uids)?v.uids:[];
+  if(!uids.includes(uid)){
+    if((v.n||0)>=(v.max||1)){const x=new Error('used');x.msg='Ten kod został już użyty. Poproś o nowy.';throw x}
+    await MQFB.update('invites/'+inv,{n:(v.n||0)+1,uids:uids.concat([uid])});
+  }
+  await MQFB.set('members/'+uid,{p:v.p,inv,at:Date.now()});
+  const kd=await MQFB.get('keys/app');
+  if(!kd.exists||!kd.data.k){const x=new Error('nokey');x.msg='Apka nie jest jeszcze skonfigurowana.';throw x}
+  ls('mq:k',kd.data.k);ls('mq:p',v.p);ls('mq:inv',inv);
+  if(kd.data.ap&&kd.data.ap===v.p){try{const a=await MQFB.get('admins/'+uid);if(!a.exists)await MQFB.set('admins/'+uid,{at:Date.now()});ls('mq:admin','1')}catch(e){}}
+  return kd.data.k;
+}
+
+const logo='<img class="lk-logo" src="icons/icon-192.png" alt="">';
+function screen(html){$('#mq-lock').innerHTML=`<div class="lk">${html}</div>`}
+
+function showLock(msg){
+  if(isIOS()&&!isStandalone()){
+    screen(`${logo}<h1>matoorqa</h1><p class="sub">Beta tylko na zaproszenie.</p>
+     <div class="lk-card">${inApp()?'<b>Otwórz ten link w Safari.</b><span>W tej aplikacji nie da się dodać matoorqa do ekranu głównego.</span>':`<b>Najpierw dodaj apkę do ekranu głównego</b><ol><li>Stuknij <b>Udostępnij</b> (kwadrat ze strzałką).</li><li>Wybierz <b>„Do ekranu początkowego”</b> i potwierdź.</li><li>Otwórz matoorqa z ikonki i dopiero tam wpisz kod.</li></ol>`}</div>
+     <p class="lk-note">Kod działa tylko raz. Jak wpiszesz go tutaj w przeglądarce, apka z ikonki już go nie przyjmie.</p>`);
+    return}
+  screen(`${logo}<h1>matoorqa</h1><p class="sub">Beta tylko na zaproszenie.</p>
+   <form id="lk-f" autocomplete="off"><label for="lk-in">Kod zaproszenia</label>
+    <input id="lk-in" inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="29" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" aria-describedby="lk-m"></form>
+   <button class="lk-btn" id="lk-go" form="lk-f" type="submit">Wejdź</button>
+   <div class="lk-msg" id="lk-m" role="status">${msg?esc(msg):''}</div>
+   <p class="lk-note">Kod działa raz, na jednym urządzeniu. Po wejściu apka pamięta cię na tym telefonie.</p>
+   <button class="lk-btn ghost" id="lk-inst" type="button"${window.__bip?'':' hidden'}>Zainstaluj na telefonie</button>`);
+  const inp=$('#lk-in');
+  inp.addEventListener('input',()=>{const p=prettyCode(inp.value).slice(0,24);if(p!==inp.value)inp.value=p;$('#lk-m').textContent=''});
+  $('#lk-inst').addEventListener('click',async()=>{const e=window.__bip;if(!e)return;e.prompt();try{await e.userChoice}catch(x){}window.__bip=null;$('#lk-inst').hidden=true});
+  $('#lk-f').addEventListener('submit',async ev=>{ev.preventDefault();const b=$('#lk-go'),m=$('#lk-m');b.disabled=true;b.textContent='Sprawdzam…';m.textContent='';
+    try{const k=await claim(inp.value);b.textContent='Otwieram…';const P=await openPayload(k);launch(P)}
+    catch(e){m.className='lk-msg';m.textContent=e.msg||errTxt(e);b.disabled=false;b.textContent='Wejdź'}});
+  setTimeout(()=>{try{inp.focus()}catch(e){}},60);
+}
+
+async function showSetup(k){
+  screen(`${logo}<h1>Konfiguracja</h1><p class="sub">Ten link jest tylko dla ciebie. Nie wysyłaj go nikomu.</p>
+   <div class="lk-card"><span>Zrobię klucz, <b>10 kodów dla znajomych</b> i twoje konto admina na tym urządzeniu.</span></div>
+   <button class="lk-btn" id="lk-s">Uruchom konfigurację</button><div class="lk-msg" id="lk-m" role="status"></div>`);
+  $('#lk-s').addEventListener('click',async()=>{const b=$('#lk-s'),m=$('#lk-m');b.disabled=true;b.textContent='Konfiguruję…';m.textContent='';
+    try{
+      try{await openPayload(k)}catch(e){if(e.net)throw e;const x=new Error('key');x.msg='Ten link jest uszkodzony. Skopiuj go jeszcze raz w całości.';throw x}
+      const uid=await MQFB.ready();
+      const kd=await MQFB.get('keys/app').catch(()=>({exists:false,denied:true}));
+      if(kd.exists){const x=new Error('done');x.msg='Konfiguracja była już zrobiona. Kody znajdziesz w Profilu, w sekcji Zaproszenia, na urządzeniu, na którym ją robiłeś.';throw x}
+      await MQFB.set('admins/'+uid,{at:Date.now()});
+      const codes=[];
+      for(let i=0;i<11;i++){const c=newCode(),inv=await hash(c),p=newPid(),label=i?'Znajomy '+i:'Ty';codes.push({code:c,inv,p,label})}
+      await MQFB.set('keys/app',{k,ap:codes[0].p,at:Date.now()});
+      for(let i=0;i<codes.length;i++){const c=codes[i];
+        await MQFB.set('invites/'+c.inv,{p:c.p,label:c.label,n:0,max:1,uids:[],at:Date.now()+i});
+        await MQFB.set('codes/'+c.inv,{code:c.code,p:c.p,label:c.label,at:Date.now()+i})}
+      await claim(codes[0].code);
+      ls('mq:admin','1');ls('mq:codes',JSON.stringify(codes));
+      history.replaceState(null,'',location.pathname+location.search);
+      showCodes(codes.slice(1));
+    }catch(e){m.className='lk-msg';m.textContent=e.msg||(/permission/i.test(e&&(e.code||e.message)||'')?'Baza jest już zablokowana regułami. Konfigurację trzeba zrobić przed wklejeniem reguł.':errTxt(e));b.disabled=false;b.textContent='Spróbuj jeszcze raz'}
+  });
+}
+function showCodes(codes){
+  const all=codes.map(c=>`${c.label}: ${c.code}`).join('\n');
+  screen(`${logo}<h1>Gotowe</h1><p class="sub">Kody dla znajomych. Każdy działa raz.</p>
+   <div class="lk-codes">${codes.map((c,i)=>`<div class="lk-code"><span><small>${esc(c.label)}</small>${esc(c.code)}</span><button type="button" data-i="${i}">Kopiuj</button></div>`).join('')}</div>
+   <button class="lk-btn ghost" id="lk-all" type="button">Kopiuj wszystkie</button>
+   <p class="lk-note">Kody zobaczysz też w apce: Profil, sekcja Zaproszenia. Teraz wklej reguły w Firebase, tak jak w instrukcji.</p>
+   <button class="lk-btn" id="lk-open" type="button">Otwórz apkę</button>`);
+  document.querySelectorAll('.lk-code button').forEach(b=>b.addEventListener('click',async()=>{const ok=await copy(codes[+b.dataset.i].code);b.textContent=ok?'Skopiowane':'Zaznacz ręcznie'}));
+  $('#lk-all').addEventListener('click',async()=>{const ok=await copy(all);$('#lk-all').textContent=ok?'Skopiowane':'Zaznacz kody ręcznie'});
+  $('#lk-open').addEventListener('click',async()=>{const b=$('#lk-open');b.disabled=true;b.textContent='Otwieram…';try{launch(await openPayload(ls('mq:k')))}catch(e){b.disabled=false;b.textContent='Otwórz apkę'}});
+}
+
+async function start(){
+  const h=location.hash;
+  if(h.startsWith('#setup=')){const k=decodeURIComponent(h.slice(7));if(ls('mq:k')===k&&ls('mq:admin')==='1'){history.replaceState(null,'',location.pathname+location.search)}else{showSetup(k);return}}
+  const k=ls('mq:k');
+  if(k){
+    try{launch(await openPayload(k));return}
+    catch(e){
+      if(e.net){screen(`${logo}<h1>matoorqa</h1><p class="sub">Brak internetu, a apka nie jest jeszcze zapisana na tym urządzeniu.</p><button class="lk-btn" onclick="location.reload()">Spróbuj jeszcze raz</button>`);return}
+      ls('mq:k',null);
+    }
+  }
+  showLock();
+}
+start();
+})();
+
+</script>
+</body>
+</html>
