@@ -11,9 +11,12 @@ const hsh = t => { let x = 0; for (const c of String(t)) x = (x * 31 + c.charCod
 const QUIET_FROM = 22, QUIET_TO = 8, PER_RUN = 2, PER_DAY = 6;
 
 const plf = (n, a, b, c) => { n = Math.abs(n); if (n === 1) return a; const d = n % 10, h = n % 100; return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? b : c; };
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 const dni = n => `${n} ${plf(n, 'dzień', 'dni', 'dni')}`;
 const fmtN = n => String(Math.round(+n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const sec = ms => (Math.max(0, +ms || 0) / 1000).toFixed(1).replace('.', ',') + ' s';
+const isDone = m => m.ok != null ? m.ok : m.td >= m.g;
+const left = m => m.lf != null ? m.lf : Math.max(0, m.g - m.td);
 const weekIdx = d => Math.floor((d + 3) / 7);
 const cmp = (a, am, b, bm) => a !== b ? Math.sign(a - b) : Math.sign(bm - am);
 const dec = x => { if (!x) return null; if (typeof x.j === 'string') { try { return JSON.parse(x.j); } catch (e) { return null; } } return x; };
@@ -29,21 +32,26 @@ export function local(now, tz) {
 
 // stan dnia z dokumentu social (albo z pełnego stanu, gdy ktoś nie ma nicku)
 function today(x, day) {
-  return { td: +x.d === day ? (+x.td || 0) : 0, st: +x.d >= day - 1 ? (+x.st || 0) : 0, g: +x.g || 60, n: x.n || '', last: +x.td > 0 ? +x.d : +x.st > 0 ? +x.d - 1 : +x.d };
+  const td = +x.d === day;
+  return { td: td ? (+x.td || 0) : 0, st: +x.d >= day - 1 ? (+x.st || 0) : 0, g: +x.g || 60, ok: td && x.ok != null ? !!x.ok : undefined, lf: td && x.lf != null ? +x.lf : undefined, n: x.n || '', last: +x.td > 0 ? +x.d : +x.st > 0 ? +x.d - 1 : +x.d };
 }
 function fromState(S, day) {
   if (!S || !S.days) return null;
-  const g = +(S.set && S.set.goal) || 60, fz = Array.isArray(S.fz) ? S.fz : [];
-  const met = d => (+S.days[d] || 0) >= g || fz.includes(d);
+  const g = +(S.set && S.set.goal) || 60, fz = Array.isArray(S.fz) ? S.fz : [], sep = !(S.set && (S.set.gsep === false || S.set.gsep === 0));
+  const GR = { pol: ['pol'], mat: ['matp', 'matr'], ang: ['angp', 'angr'], geo: ['geo'] }, subs = (S.set && S.set.subs) || [];
+  const grs = Object.keys(GR).filter(k => GR[k].some(x => subs.includes(x)));
+  const dayOk = d => { const x = (S.dx || {})[d]; if (!sep || !x || !grs.length) return (+S.days[d] || 0) >= g; return grs.every(k => (+x[k] || 0) >= g); };
+  const met = d => fz.includes(d) || dayOk(d);
+  const x0 = (S.dx || {})[day], lf = sep && x0 && grs.length ? grs.reduce((p, k) => p + Math.max(0, g - (+x0[k] || 0)), 0) : Math.max(0, g - (+S.days[day] || 0));
   let st = 0, d = met(day) ? day : day - 1;
   while (met(d) && st < 3650) { if (!fz.includes(d)) st++; d--; }
   const act = Object.keys(S.days).filter(k => +S.days[k] > 0).map(Number);
-  return { td: +S.days[day] || 0, st, g, n: (S.set && S.set.name) || '', last: act.length ? Math.max(...act) : null };
+  return { td: +S.days[day] || 0, st, g, ok: met(day), lf, n: (S.set && S.set.name) || '', last: act.length ? Math.max(...act) : null };
 }
 
 // co wysłać jednej osobie; m.set to zmiana stanu, zapisywana dopiero po udanej wysyłce
 export function events(p, soc, st, my, ctx) {
-  const { day, h, H, now } = ctx, out = [], me = soc[p] || null, wk = weekIdx(day);
+  const { day, h, H, now, S } = ctx, out = [], me = soc[p] || null, wk = weekIdx(day);
   const xw = x => x && x.wk === wk ? (+x.xw || 0) : 0;
   // 1. wyzwania na pojedynek
   let top = 0, hit = null;
@@ -67,7 +75,7 @@ export function events(p, soc, st, my, ctx) {
   }
   if (hit) out.push(hit.typ === 'h'
       ? { t: `Piątka od @${hit.h}`, b: 'Za dzisiejszy cel. Tak trzymaj.', u: '#start', g: 'soc', set: { nz: top } }
-      : { t: `@${hit.h} cię szturcha`, b: my && my.td < my.g ? `Do celu brakuje ${fmtN(my.g - my.td)} XP. Jedna lekcja i po sprawie.` : 'Ekipa się uczy. Wpadnij na jedną lekcję.', u: '#start', g: 'soc', set: { nz: top } });
+      : { t: `@${hit.h} cię szturcha`, b: my && !isDone(my) ? `Do celu brakuje ${fmtN(left(my))} XP. Jedna lekcja i po sprawie.` : 'Ekipa się uczy. Wpadnij na jedną lekcję.', u: '#start', g: 'soc', set: { nz: top } });
   // 3. wyniki moich wyzwań
   if (me && me.du) {
     top = 0; hit = null;
@@ -107,11 +115,17 @@ export function events(p, soc, st, my, ctx) {
       if (best) out.push({ t: `Pytanie dnia: @${best.h} w ${sec(best.qd.ms)}`, b: 'To samo pytanie czeka na ciebie. Pobijesz ten czas?', u: '#start', g: 'qd', set: { qd: day } });
     }
   }
+  // 6b. powtórka z wczoraj (5–7 pytań kontrolnych), po południu, gdy jeszcze nie zrobiona
+  if (S && st.rcp !== day && S.rc !== day && h >= 13 && h < 20) {
+    const y = (S.al || {})[day - 1], n = Math.min(7, y && y.length ? new Set(y.map(x => x[0])).size : Object.values(S.q || {}).filter(r => Array.isArray(r) && r[4] === day - 1).length);
+    if (n >= 3) { const m = Math.max(2, Math.round(n * .5)), pq = `${n} ${plf(n, 'pytanie', 'pytania', 'pytań')}`;
+      out.push({ ...[{ t: 'Ile zostało z wczoraj?', b: `${n} ${plf(n, 'pytanie kontrolne', 'pytania kontrolne', 'pytań kontrolnych')} z wczorajszej nauki. Ok. ${m} min.` }, { t: 'Szybki test z wczoraj', b: `${cap(pq)}, żeby nic nie uciekło. Ok. ${m} min.` }][(day + hsh(p)) % 2], u: '#start', g: 'recap', set: { rcp: day } }); }
+  }
   // 7. przypomnienie o wybranej godzinie (teksty zmieniają się co dzień), 8. ostatni dzwonek o 21
   const pick = arr => { arr = arr.filter(Boolean); return arr[(day + hsh(p)) % arr.length]; };
   if (my && st.rd !== day && h >= H) {
-    const gap = fmtN(my.g - my.td), dm = MATURA - day, nm = my.n ? String(my.n).split(' ')[0] : '', idle = my.last == null ? 0 : day - my.last;
-    if (my.td >= my.g) st.rd = day;
+    const gap = fmtN(left(my)), dm = MATURA - day, nm = my.n ? String(my.n).split(' ')[0] : '', idle = my.last == null ? 0 : day - my.last;
+    if (isDone(my)) st.rd = day;
     else if (idle >= 6 && st.pa !== my.last) out.push({ t: 'Te przypomnienia chyba nie działają', b: 'Od teraz piszę co trzy dni. Apka czeka, wracaj kiedy chcesz.', u: '#start', g: 'seria', set: { rd: day, rt: now, pa: my.last } });
     else if (idle >= 6 && idle % 3) st.rd = day;
     else out.push({ ...pick(my.st > 0 ? [
@@ -126,7 +140,7 @@ export function events(p, soc, st, my, ctx) {
       dm > 0 && { t: `Do matury ${dni(dm)}`, b: 'Każdy dzień się liczy. 5 minut wystarczy na start.' },
       { t: 'Telefon w ręku? Idealny moment', b: `Jedna lekcja, ok. 5 minut. Do celu ${gap} XP.` },
     ]), u: '#start', g: 'seria', set: { rd: day, rt: now } });
-  } else if (my && st.rd === day && st.rl !== day && h >= 21 && my.st >= 2 && my.td < my.g && now - (st.rt || 0) >= 2 * 36e5) {
+  } else if (my && st.rd === day && st.rl !== day && h >= 21 && my.st >= 2 && !isDone(my) && now - (st.rt || 0) >= 2 * 36e5) {
     out.push({ ...pick([
       { t: `Ostatni dzwonek: seria ${dni(my.st)}`, b: `Do północy ${24 - h} h. Jedna lekcja ratuje serię.` },
       { t: `Seria ${dni(my.st)} zaraz przepadnie`, b: `Zostały ${24 - h} h. 5 minut przed snem i jest uratowana.` },
@@ -163,9 +177,10 @@ export async function main({ db, send, now = Date.now(), log = console.log }) {
       if (h >= QUIET_FROM || h < QUIET_TO) continue;
       const ref = db.doc('push/' + p), st = (await ref.get()).data() || {}, was = JSON.stringify(st);
       if (!st.c || st.c.d !== day) st.c = { d: day, n: 0 };
+      const S = dec((await db.doc('data/users/' + p + '/state').get()).data());
       let my = soc[p] ? today(soc[p], day) : null;
-      if (!my) my = fromState(dec((await db.doc('data/users/' + p + '/state').get()).data()), day);
-      const msgs = st.c.n < PER_DAY ? events(p, soc, st, my, { day, h, H: Math.min(...L.map(x => x.h)), now }).slice(0, Math.min(PER_RUN, PER_DAY - st.c.n)) : [];
+      if (!my) my = fromState(S, day);
+      const msgs = st.c.n < PER_DAY ? events(p, soc, st, my, { day, h, H: Math.min(...L.map(x => x.h)), now, S }).slice(0, Math.min(PER_RUN, PER_DAY - st.c.n)) : [];
       for (const m of msgs) {
         let ok = false;
         for (const x of L) {
