@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: '7,37 * * * *'
   workflow_dispatch:
+    inputs:
+      test:
+        description: 'Wyślij powiadomienie testowe teraz (1 = tak)'
+        default: '0'
 concurrency:
   group: push
   cancel-in-progress: false
@@ -24,4 +28,5 @@ jobs:
         working-directory: srv
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          TEST: ${{ inputs.test }}
         run: node send.mjs

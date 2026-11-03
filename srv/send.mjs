@@ -149,7 +149,7 @@ export function events(p, soc, st, my, ctx) {
   return out.sort((a, b) => (a.g === 'seria' ? 0 : 1) - (b.g === 'seria' ? 0 : 1));
 }
 
-export async function main({ db, send, now = Date.now(), log = console.log }) {
+export async function main({ db, send, now = Date.now(), log = console.log, test = false }) {
   // klucze VAPID: powstają raz; prywatny tylko w srv/vapid (apka nie ma do niego dostępu), publiczny w cfg/push
   let v = (await db.doc('srv/vapid').get()).data();
   if (!v || !v.pub || !v.priv) { const k = webpush.generateVAPIDKeys(); v = { pub: k.publicKey, priv: k.privateKey, at: now }; await db.doc('srv/vapid').set(v); log('nowe klucze VAPID'); }
@@ -167,6 +167,13 @@ export async function main({ db, send, now = Date.now(), log = console.log }) {
   }
   const people = Object.keys(subs), R = { osoby: people.length, urzadzenia: 0, wyslane: 0, usuniete: 0, bledy: 0 };
   if (!people.length) return R;
+  if (test) {
+    for (const p of people) for (const x of subs[p]) {
+      try { await send(x.s, JSON.stringify({ t: 'matoorqa działa', b: 'Powiadomienia dochodzą. Kliknij, żeby wejść do apki.', u: '#start', g: 'test' })); R.wyslane++; }
+      catch (e) { const c = e && e.statusCode; if (c === 404 || c === 410) { R.usuniete++; try { await x.ref.delete(); } catch (z) {} } else { R.bledy++; log('błąd wysyłki: ' + (c || (e && e.message))); } }
+    }
+    return R;
+  }
   const soc = {};
   for (const d of (await db.collection('social').get()).docs) { const x = dec(d.data()); if (x && typeof x.h === 'string' && x.h) soc[d.id] = x; }
 
@@ -200,6 +207,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (!process.env.FIREBASE_SA) { console.error('Brak sekretu FIREBASE_SA w ustawieniach repo (Settings, Secrets and variables, Actions).'); process.exit(1); }
   let sa; try { sa = JSON.parse(process.env.FIREBASE_SA); } catch (e) { console.error('Sekret FIREBASE_SA nie jest poprawnym JSON-em. Wklej całą zawartość pobranego pliku.'); process.exit(1); }
   admin.initializeApp({ credential: admin.credential.cert(sa) });
-  const r = await main({ db: admin.firestore() });
+  const r = await main({ db: admin.firestore(), test: process.env.TEST === '1' });
   console.log(JSON.stringify(r));
 }
