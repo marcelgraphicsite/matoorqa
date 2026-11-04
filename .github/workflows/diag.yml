@@ -1,0 +1,22 @@
+name: Diag
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Instalacja
+        working-directory: srv
+        run: npm install --no-audit --no-fund --loglevel=error
+      - name: Odczyt
+        working-directory: srv
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: node diag.mjs
