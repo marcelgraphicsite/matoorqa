@@ -1,0 +1,27 @@
+name: Restore
+on:
+  workflow_dispatch:
+    inputs:
+      bid:
+        description: 'Id kopii'
+        required: true
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Instalacja
+        working-directory: srv
+        run: npm install --no-audit --no-fund --loglevel=error
+      - name: Przywracanie
+        working-directory: srv
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          BID: ${{ inputs.bid }}
+        run: node restore.mjs
