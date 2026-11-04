@@ -73,6 +73,28 @@ function fromState(S, day) {
 }
 
 // co wysłać jednej osobie; m.set to zmiana stanu, zapisywana dopiero po udanej wysyłce
+const arr = x => Array.isArray(x) ? x : [];
+// znajomi potwierdzeni z obu stron (ta sama zasada co w apce: zaproszenie + przyjęcie)
+export function friendsOf(p, soc) {
+  const me = soc[p]; if (!me) return [];
+  const out = [];
+  for (const k of new Set(arr(me.fr).concat(arr(me.rq)))) {
+    const x = soc[k]; if (k === p || !x) continue;
+    const iFr = arr(me.fr).includes(k), iRq = arr(me.rq).includes(k), theyFr = arr(x.fr).includes(p), theyRq = arr(x.rq).includes(p), v3 = (+x.v || 0) >= 3;
+    if ((iFr && (theyFr || theyRq || !v3)) || (iRq && theyFr)) out.push(k);
+  }
+  return out;
+}
+// zespół: założyciel + osoby potwierdzone z obu stron (są u założyciela i same wskazują ten zespół)
+export function teamOf(p, soc) {
+  const me = soc[p]; if (!me) return null;
+  const o = me.tm && me.tm.n ? p : me.tj, T = o && soc[o] && soc[o].tm && soc[o].tm.n ? soc[o].tm : null;
+  if (!T || (o !== p && !arr(T.m).includes(p) && !arr(T.inv).includes(p))) return null;
+  const mem = [o];
+  for (const k of arr(T.m).concat(arr(T.inv))) if (!mem.includes(k) && soc[k] && soc[k].tj === o) mem.push(k);
+  return { o, T, mem };
+}
+
 export function events(p, soc, st, my, ctx) {
   const { day, h, H, now, S } = ctx, F = ctx.F || 2, out = [], me = soc[p] || null, wk = weekIdx(day);
   const xw = x => x && x.wk === wk ? (+x.xw || 0) : 0;
@@ -101,6 +123,25 @@ export function events(p, soc, st, my, ctx) {
   if (hit) out.push(hit.typ === 'h'
       ? { t: `Piątka od @${hit.h}`, b: 'Za dzisiejszy cel. Tak trzymaj.', u: '#start', g: 'soc', set: { nz: top, nzc: { d: day, n: st.nzc.n + 1 } } }
       : { t: `@${hit.h} cię szturcha`, b: my && !isDone(my) ? `Do celu brakuje ${fmtN(left(my))} XP. Jedna lekcja i po sprawie.` : 'Ekipa się uczy. Wpadnij na jedną lekcję.', u: '#start', g: 'soc', set: { nz: top, nzc: { d: day, n: st.nzc.n + 1 } } });
+  // 2b. zaproszenia: do znajomych, do zespołu, prośby o dołączenie, przyjęte zaproszenia (każde raz)
+  if (me) {
+    const seen = st.sq || {}; let ev = null;
+    const mark = key => { const n = Object.assign({}, seen, { [key]: day }); for (const k of Object.keys(n)) if (n[k] < day - 30) delete n[k]; return n; };
+    for (const k in soc) {
+      if (ev) break; if (k === p) continue; const x = soc[k];
+      if (arr(x.rq).includes(p) && !arr(me.fr).includes(k) && !(me.rx || {})[k] && !seen['f' + k]) ev = { t: `@${x.h} chce dodać cię do znajomych`, b: 'Przyjmij w apce, a zobaczycie się w lidze.', u: '#znajomi', g: 'soc', set: { sq: mark('f' + k) } };
+      else if (x.tm && x.tm.n && arr(x.tm.inv).includes(p) && me.tj !== k && !(me.tx || {})[k] && !seen['t' + k]) ev = { t: `Zaproszenie do zespołu „${x.tm.n}”`, b: `Od @${x.h}${x.tm.sc ? ' · ' + x.tm.sc : ''}. Dołącz w apce.`, u: '#znajomi', g: 'soc', set: { sq: mark('t' + k) } };
+      else if (me.tm && me.tm.n && x.tq === p && !arr(me.tm.m).includes(k) && !(me.tm.rj || {})[k] && !seen['j' + k]) ev = { t: `@${x.h} chce dołączyć do zespołu`, b: `${me.tm.n}: przyjmij albo odrzuć w apce.`, u: '#znajomi', g: 'soc', set: { sq: mark('j' + k) } };
+      else if (arr(me.rq).includes(k) && arr(x.fr).includes(p) && !seen['a' + k]) ev = { t: `@${x.h} przyjmuje zaproszenie`, b: 'Jesteście znajomymi. Sprawdź, kto prowadzi w lidze.', u: '#znajomi', g: 'soc', set: { sq: mark('a' + k) } };
+    }
+    if (ev) out.push(ev);
+  }
+  // 2c. admin: nowe zdjęcia profilowe do sprawdzenia
+  if (me && ctx.adm && ctx.adm === p) {
+    const pend = Object.keys(soc).filter(k => k !== p && soc[k].av && soc[k].avh && (me.apv || {})[k] !== soc[k].avh && (me.rjv || {})[k] !== soc[k].avh);
+    const nw = pend.filter(k => !arr(st.avq).includes(soc[k].avh));
+    if (nw.length) out.push({ t: nw.length > 1 ? `${nw.length} zdjęcia do sprawdzenia` : 'Nowe zdjęcie profilowe do sprawdzenia', b: `@${soc[nw[0]].h}${nw.length > 1 ? ' i inni' : ''}. Zaakceptuj albo odrzuć w apce.`, u: '#znajomi', g: 'soc', set: { avq: [...new Set(arr(st.avq).concat(nw.map(k => soc[k].avh)))].slice(-80) } });
+  }
   // 3. wyniki moich wyzwań
   if (me && me.du) {
     top = 0; hit = null;
@@ -114,7 +155,9 @@ export function events(p, soc, st, my, ctx) {
     }
   }
   // 4. liga: ktoś mnie wyprzedził
-  const fr = me && Array.isArray(me.fr) ? me.fr.filter(k => k !== p && soc[k]) : [];
+  // liga: zespół (gdy ma co najmniej 2 osoby), inaczej znajomi; ekipa do pytania dnia: jedni i drudzy
+  const frs = friendsOf(p, soc), TM = teamOf(p, soc), inTeam = !!(TM && TM.mem.length >= 2);
+  const fr = inTeam ? TM.mem.filter(k => k !== p) : frs, crew = [...new Set(frs.concat(TM ? TM.mem.filter(k => k !== p) : []))];
   if (me && fr.length) {
     const rows = [p, ...fr].map(k => ({ k, xw: xw(soc[k]) })).sort((a, b) => b.xw - a.xw);
     const mx = xw(me), above = rows.filter(r => r.k !== p && r.xw > mx).map(r => r.k);
@@ -141,11 +184,11 @@ export function events(p, soc, st, my, ctx) {
       let sum = 0, tg = 0;
       for (const k of team) { sum += xw(soc[k]); tg += Math.max(20, +soc[k].g || 60) * 5; }
       tg += TEAM_STEP * Math.max(0, wk - TEAM_W0);
-      if (sum >= tg) out.push({ t: 'Ekipa dowiozła cel tygodnia', b: `${fmtN(sum)} XP razem przy celu ${fmtN(tg)}. W przyszłym tygodniu cel rośnie o ${TEAM_STEP} XP.`, u: '#znajomi', g: 'ekipa', set: { tg: wk } });
+      if (sum >= tg) out.push({ t: inTeam ? 'Zespół dowiózł cel tygodnia' : 'Ekipa dowiozła cel tygodnia', b: `${fmtN(sum)} XP razem przy celu ${fmtN(tg)}. W przyszłym tygodniu cel rośnie o ${TEAM_STEP} XP.`, u: '#znajomi', g: 'ekipa', set: { tg: wk } });
     }
     // 6. pytanie dnia: ktoś z ekipy już odpowiedział
     if (F >= 2 && st.qd !== day && h >= 12 && h < 21 && !(me.qd && +me.qd.d === day)) {
-      const best = fr.map(k => soc[k]).filter(x => x.qd && +x.qd.d === day && x.qd.ok).sort((a, b) => a.qd.ms - b.qd.ms)[0];
+      const best = crew.map(k => soc[k]).filter(x => x && x.qd && +x.qd.d === day && x.qd.ok).sort((a, b) => a.qd.ms - b.qd.ms)[0];
       if (best) out.push({ t: `Pytanie dnia: @${best.h} w ${sec(best.qd.ms)}`, b: 'To samo pytanie czeka na ciebie. Pobijesz ten czas?', u: '#start', g: 'qd', set: { qd: day } });
     }
   }
@@ -268,6 +311,7 @@ export async function main({ db, send, now = Date.now(), log = console.log, test
   }
   const soc = {};
   for (const d of (await db.collection('social').get()).docs) { const x = dec(d.data()); if (x && typeof x.h === 'string' && x.h) soc[d.id] = x; }
+  let adm = null; try { const kd = (await db.doc('keys/app').get()).data(); adm = kd && typeof kd.ap === 'string' ? kd.ap : null; } catch (e) {}
 
   for (const p of people) {
     try {
@@ -279,7 +323,7 @@ export async function main({ db, send, now = Date.now(), log = console.log, test
       const S = dec((await db.doc('data/users/' + p + '/state').get()).data());
       let my = soc[p] ? today(soc[p], day) : null;
       if (!my) my = fromState(S, day);
-      const msgs = st.c.n < PER_DAY ? events(p, soc, st, my, { day, h, H: Math.min(...L.map(x => x.h)), F: L.reduce((a, b) => b.at > a.at ? b : a).f, now, S }).slice(0, Math.min(PER_RUN, PER_DAY - st.c.n)) : [];
+      const msgs = st.c.n < PER_DAY ? events(p, soc, st, my, { day, h, H: Math.min(...L.map(x => x.h)), F: L.reduce((a, b) => b.at > a.at ? b : a).f, now, S, adm }).slice(0, Math.min(PER_RUN, PER_DAY - st.c.n)) : [];
       for (const m of msgs) {
         let ok = false;
         for (const x of L) {
