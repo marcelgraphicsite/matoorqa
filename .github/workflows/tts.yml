@@ -1,0 +1,39 @@
+name: Lektor AI
+on:
+  push:
+    branches: [main]
+    paths: ['tts/manifest.json']
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: lektor-ai
+  cancel-in-progress: false
+jobs:
+  nagrania:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Piper (darmowy, otwarty syntezator mowy)
+        run: |
+          pip install -q "piper-tts==1.8.0"
+          ffmpeg -version | head -1
+      - name: Polskie głosy
+        run: |
+          mkdir -p ~/glosy && cd ~/glosy
+          for v in pl_PL-gosia-medium pl_PL-darkman-medium; do
+            python -m piper.download_voices "$v" --download-dir . || echo "nie udało się pobrać $v"
+          done
+          ls -la
+      - name: Nagrania
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name marcelgraphicsite
+          git config user.email marcelgraphicsite@users.noreply.github.com
+          python tts/gen.py ~/glosy 320
