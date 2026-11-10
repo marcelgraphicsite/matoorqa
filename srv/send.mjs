@@ -35,12 +35,14 @@ export function local(now, tz) {
 // plan dnia ze stanu: cel, przedmioty (grupy) i które już zaliczone
 const GRS = { pol: ['pol'], mat: ['matp', 'matr'], ang: ['angp', 'angr'], geo: ['geo'] };
 const GRN = { pol: 'polski', mat: 'matma', ang: 'angielski', geo: 'geografia' };
-// cel dnia w XP z mnożnikiem: zapisany na ten dzień (S.dg) albo cel bazowy × aktualny mnożnik (S.set.xm)
-const goalOn = (S, d, day) => { const r = S && S.dg && +S.dg[d]; if (r) return r; const b = +(S && S.set && S.set.goal) || 60; return d === day ? b * (+(S && S.set && S.set.xm) || 1) : b; };
+// cel dnia: zapisany na ten dzień (S.dg) albo bazowy. Od v7 cel i postęp do celu są bez mnożnika (S.dr), starsze dni jak były (S.dx)
+const goalOn = (S, d, day) => { const r = S && S.dg && +S.dg[d]; if (r) return r; const b = +(S && S.set && S.set.goal) || 60; return d === day && (+S.v || 0) < 7 ? b * (+(S && S.set && S.set.xm) || 1) : b; };
+const gx = (S, d) => (S.dr && S.dr[d]) || (S.dx || {})[d] || null;
+const totOn = (S, d) => { const r = S.dr && S.dr[d]; return r ? Object.values(r).reduce((p, v) => p + (+v || 0), 0) : (+((S.days || {})[d]) || 0); };
 function plan(S, day) {
   if (!S || !S.set) return null;
   const g = goalOn(S, day, day), subs = S.set.subs || [], sep = !(S.set.gsep === false || S.set.gsep === 0);
-  const grs = Object.keys(GRS).filter(k => k === 'pol' || GRS[k].some(x => subs.includes(x))), x = (S.dx || {})[day] || {};
+  const grs = Object.keys(GRS).filter(k => k === 'pol' || GRS[k].some(x => subs.includes(x))), x = gx(S, day) || {};
   return { g, sep: sep && grs.length > 1, grs, done: grs.filter(k => (+x[k] || 0) >= g), todo: grs.filter(k => (+x[k] || 0) < g) };
 }
 // zaległości: słówka z terminem na dziś, otwarte błędy, powtórki zadań z banku
@@ -66,9 +68,9 @@ function fromState(S, day) {
   const GR = { pol: ['pol'], mat: ['matp', 'matr'], ang: ['angp', 'angr'], geo: ['geo'] }, subs = (S.set && S.set.subs) || [];
   const grs = Object.keys(GR).filter(k => k === 'pol' || GR[k].some(x => subs.includes(x)));
   const grsOn = d => { const r = S.dgg && S.dgg[d]; return d !== day && typeof r === 'string' && r ? r.split(' ') : grs; };
-  const dayOk = d => { const x = (S.dx || {})[d], gd = goalOn(S, d, day), gs = grsOn(d); if (!sep || !x || !gs.length) return (+S.days[d] || 0) >= gd; return gs.every(k => (+x[k] || 0) >= gd); };
+  const dayOk = d => { const x = gx(S, d), gd = goalOn(S, d, day), gs = grsOn(d); if (!sep || !x || !gs.length) return totOn(S, d) >= gd; return gs.every(k => (+x[k] || 0) >= gd); };
   const met = d => fz.includes(d) || dayOk(d);
-  const x0 = (S.dx || {})[day], lf = sep && x0 && grs.length ? grs.reduce((p, k) => p + Math.max(0, g - (+x0[k] || 0)), 0) : Math.max(0, g - (+S.days[day] || 0));
+  const x0 = gx(S, day), lf = sep && x0 && grs.length ? grs.reduce((p, k) => p + Math.max(0, g - (+x0[k] || 0)), 0) : Math.max(0, g - totOn(S, day));
   let st = 0, d = met(day) ? day : day - 1;
   while (met(d) && st < 3650) { if (!fz.includes(d)) st++; d--; }
   const act = Object.keys(S.days).filter(k => +S.days[k] > 0).map(Number);
