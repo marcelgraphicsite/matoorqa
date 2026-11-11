@@ -14,9 +14,22 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..700&family=Nunito:wght@700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap">
+<link rel="preload" href="fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/hanken-grotesk-latin-ext-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style id="mq-fonts">
+@font-face{font-family:'Hanken Grotesk';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/hanken-grotesk-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Hanken Grotesk';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/hanken-grotesk-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/nunito-latin-ext-700-normal.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/nunito-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:800;font-display:swap;src:url(fonts/nunito-latin-ext-800-normal.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:800;font-display:swap;src:url(fonts/nunito-latin-800-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url(fonts/nunito-latin-ext-900-normal.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url(fonts/nunito-latin-900-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Newsreader';font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/newsreader-latin-ext-opsz-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Newsreader';font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/newsreader-latin-opsz-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Newsreader';font-style:italic;font-weight:200 800;font-display:swap;src:url(fonts/newsreader-latin-ext-opsz-italic.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Newsreader';font-style:italic;font-weight:200 800;font-display:swap;src:url(fonts/newsreader-latin-opsz-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+</style>
 <style id="mq-ls">
 html,body{margin:0;background:#07080B;color:#F3F2EF}
 #mq-lock{--acc:#E8B86A;--fg:#F3F2EF;--fg2:#A3A7AE;--fg3:#6F747D;--line:rgba(255,255,255,.1);--bad:#FF8A80;--ok:#8BE3B2;
@@ -54,10 +67,11 @@ html,body{margin:0;background:#07080B;color:#F3F2EF}
 </head>
 <body>
 <div id="mq-lock"><div class="lk"><div class="lk-spin" aria-label="Wczytuję"></div></div></div>
-<script src="fb.js"></script>
+<script>window.__fbP=new Promise(function(r){window.__fbR=r})</script>
+<script src="fb.js" async onload="__fbR(1)" onerror="__fbR(0)"></script>
 <script>
 (function(){
-const VER='48d304d18548';
+const VER='6164b46159e6';
 const $=s=>document.querySelector(s);
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
 const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -74,6 +88,16 @@ const isStandalone=()=>navigator.standalone===true||matchMedia('(display-mode: s
 const inApp=()=>/FBAN|FBAV|Instagram|Messenger|Snapchat|TikTok|Line\//i.test(navigator.userAgent);
 async function copy(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
 window.MQL={newCode,normCode,prettyCode,newPid,hash,copy,isIOS,isStandalone};
+// fb.js ładuje się asynchronicznie (nie blokuje startu apki); kod zaproszenia i konfiguracja czekają na niego tutaj
+async function fbWait(){await window.__fbP;if(!window.MQFB){const x=new Error('net');x.net=true;throw x}}
+// nowa wersja: service worker pobiera ją w tle przy wejściu, a potem przejmuje stronę. Daję znać, gdy apka już działa
+const HAD_SW=!!(navigator.serviceWorker&&navigator.serviceWorker.controller);
+function updToast(){if(!window.__mqUpd||window.__mqUpdShown||typeof notify!=='function')return;window.__mqUpdShown=1;
+  try{notify({title:'Nowa wersja gotowa',body:'Stuknij, żeby odświeżyć.',icon:'redo',cta:'Odśwież',run:()=>location.reload(),ms:12000})}catch(e){}}
+// komunikat tylko gdy nowy worker ma inną wersję niż ta, która właśnie działa (przy przejściu ze starego workera strona bywa już nowa)
+if('serviceWorker' in navigator){const SW=navigator.serviceWorker;
+  SW.addEventListener('message',e=>{const v=e.data&&e.data.ver;if(HAD_SW&&v&&v!=='mq-'+VER){window.__mqUpd=1;updToast()}});
+  SW.addEventListener('controllerchange',()=>{if(!HAD_SW)return;try{if(SW.controller)SW.controller.postMessage({q:'ver'})}catch(e){}})}
 
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e;const b=$('#lk-inst');if(b)b.hidden=false});
 if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
@@ -92,6 +116,7 @@ function launch(P){
   const L=$('#mq-lock');if(L)L.remove();const LS0=document.getElementById('mq-ls');if(LS0)LS0.remove();
   document.body.insertAdjacentHTML('afterbegin',P.body);
   const s=document.createElement('script');s.textContent=P.js;document.body.appendChild(s);
+  setTimeout(updToast,2500);
 }
 const errTxt=e=>{const c=e&&(e.code||e.message)||'';
   if(e&&e.net||/unavailable|network|offline|failed to fetch/i.test(c))return'Brak internetu. Połącz się i spróbuj jeszcze raz.';
@@ -102,6 +127,7 @@ async function claim(raw){
   const code=normCode(raw);
   if(code.length!==20){const x=new Error('len');x.msg='Kod ma 20 znaków. Sprawdź, czy przepisałeś całość.';throw x}
   const inv=await hash(code);
+  await fbWait();
   const uid=await MQFB.ready();
   const d=await MQFB.get('invites/'+inv);
   if(!d.exists){const x=new Error('nocode');x.msg='Nie ma takiego kodu. Sprawdź, czy nie ma literówki.';throw x}
@@ -150,6 +176,7 @@ async function showSetup(k){
   $('#lk-s').addEventListener('click',async()=>{const b=$('#lk-s'),m=$('#lk-m');b.disabled=true;b.textContent='Konfiguruję…';m.textContent='';
     try{
       try{await openPayload(k)}catch(e){if(e.net)throw e;const x=new Error('key');x.msg='Ten link jest uszkodzony. Skopiuj go jeszcze raz w całości.';throw x}
+      await fbWait();
       const uid=await MQFB.ready();
       const kd=await MQFB.get('keys/app').catch(()=>({exists:false,denied:true}));
       if(kd.exists){const x=new Error('done');x.msg='Konfiguracja była już zrobiona. Kody znajdziesz w Profilu, w sekcji Zaproszenia, na urządzeniu, na którym ją robiłeś.';throw x}
