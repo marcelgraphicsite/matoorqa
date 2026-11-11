@@ -1,4 +1,4 @@
-const C='mq-58aa64e430dd';
+const C='mq-48d304d18548';
 const CORE=['./','index.html','fb.js','manifest.webmanifest','icons/icon-192.png','icons/apple-touch-icon.png','icons/badge-96.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 const AC='mq-ark-1';
