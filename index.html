@@ -67,11 +67,10 @@ html,body{margin:0;background:#07080B;color:#F3F2EF}
 </head>
 <body>
 <div id="mq-lock"><div class="lk"><div class="lk-spin" aria-label="Wczytuję"></div></div></div>
-<script>window.__fbP=new Promise(function(r){window.__fbR=r})</script>
-<script src="fb.js" async onload="__fbR(1)" onerror="__fbR(0)"></script>
+<script>window.__fbP=new Promise(function(r){window.__fbR=r});window.__fbL=function(){if(window.__fbS)return;window.__fbS=1;var s=document.createElement("script");s.src="fb.js";s.async=true;s.onload=function(){window.__fbR(1)};s.onerror=function(){window.__fbR(0)};document.head.appendChild(s)}</script>
 <script>
 (function(){
-const VER='6164b46159e6';
+const VER='4e17e1e79715';
 const $=s=>document.querySelector(s);
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
 const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -88,8 +87,12 @@ const isStandalone=()=>navigator.standalone===true||matchMedia('(display-mode: s
 const inApp=()=>/FBAN|FBAV|Instagram|Messenger|Snapchat|TikTok|Line\//i.test(navigator.userAgent);
 async function copy(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
 window.MQL={newCode,normCode,prettyCode,newPid,hash,copy,isIOS,isStandalone};
-// fb.js ładuje się asynchronicznie (nie blokuje startu apki); kod zaproszenia i konfiguracja czekają na niego tutaj
-async function fbWait(){await window.__fbP;if(!window.MQFB){const x=new Error('net');x.net=true;throw x}}
+// fb.js (Firebase) wczytuję dopiero, gdy jest potrzebny: na ekranie kodu od razu, w apce przy pierwszym użyciu chmury.
+// Wcześniej wykonywał się przy każdym starcie przed apką i blokował pierwszy obraz
+async function fbWait(){if(window.__fbL)window.__fbL();await window.__fbP;if(!window.MQFB){const x=new Error('net');x.net=true;throw x}}
+// fonty z pierwszego ekranu biorę z pamięci telefonu od razu, równolegle z odszyfrowaniem apki: pierwszy obraz ma już właściwe litery
+function warmFonts(){try{if(!navigator.serviceWorker||!navigator.serviceWorker.controller||!document.fonts)return;const F=document.fonts;
+  ['700','800','900'].forEach(w=>F.load(w+' 16px Nunito','aą').catch(()=>{}));F.load('italic 500 16px Newsreader','aą').catch(()=>{})}catch(e){}}
 // nowa wersja: service worker pobiera ją w tle przy wejściu, a potem przejmuje stronę. Daję znać, gdy apka już działa
 const HAD_SW=!!(navigator.serviceWorker&&navigator.serviceWorker.controller);
 function updToast(){if(!window.__mqUpd||window.__mqUpdShown||typeof notify!=='function')return;window.__mqUpdShown=1;
@@ -112,10 +115,18 @@ async function openPayload(k){
   return JSON.parse(txt);
 }
 function launch(P){
+  // ekran ładowania przykrywa wszystko, dopóki skrypt apki się nie wykona: bez mignięcia pustej skorupy
+  const L=$('#mq-lock');if(L)L.style.cssText='position:fixed;inset:0;z-index:2147483000';
   const st=document.createElement('style');st.textContent=P.css;document.head.appendChild(st);
-  const L=$('#mq-lock');if(L)L.remove();const LS0=document.getElementById('mq-ls');if(LS0)LS0.remove();
   document.body.insertAdjacentHTML('afterbegin',P.body);
-  const s=document.createElement('script');s.textContent=P.js;document.body.appendChild(s);
+  const done=()=>{if(L)L.remove();const x=document.getElementById('mq-ls');if(x)x.remove()};
+  // skrypt apki z adresu blob: Chrome parsuje go w tle zamiast na głównym wątku (ok. 2,3 MB kodu i danych)
+  let u=null;try{u=URL.createObjectURL(new Blob([P.js],{type:'text/javascript'}))}catch(e){}
+  const s=document.createElement('script');
+  if(u){s.src=u;s.onload=()=>{URL.revokeObjectURL(u);done()};
+    s.onerror=()=>{URL.revokeObjectURL(u);const t=document.createElement('script');t.textContent=P.js;document.body.appendChild(t);done()}}
+  else s.textContent=P.js;
+  document.body.appendChild(s);if(!u)done();
   setTimeout(updToast,2500);
 }
 const errTxt=e=>{const c=e&&(e.code||e.message)||'';
@@ -210,13 +221,14 @@ async function start(){
   const h=location.hash;
   if(h.startsWith('#setup=')){const k=decodeURIComponent(h.slice(7));if(ls('mq:k')===k&&ls('mq:admin')==='1'){history.replaceState(null,'',location.pathname+location.search)}else{showSetup(k);return}}
   const k=ls('mq:k');
-  if(k){
+  if(k){warmFonts();
     try{launch(await openPayload(k));return}
     catch(e){
       if(e.net){screen(`${logo}<h1>matoorqa</h1><p class="sub">Brak internetu, a apka nie jest jeszcze zapisana na tym urządzeniu.</p><button class="lk-btn" onclick="location.reload()">Spróbuj jeszcze raz</button>`);return}
       ls('mq:k',null);
     }
   }
+  if(window.__fbL)window.__fbL();
   showLock();
 }
 start();
