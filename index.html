@@ -70,7 +70,7 @@ html,body{margin:0;background:#07080B;color:#F3F2EF}
 <script>window.__fbP=new Promise(function(r){window.__fbR=r});window.__fbL=function(){if(window.__fbS)return;window.__fbS=1;var s=document.createElement("script");s.src="fb.js";s.async=true;s.onload=function(){window.__fbR(1)};s.onerror=function(){window.__fbR(0)};document.head.appendChild(s)}</script>
 <script>
 (function(){
-const VER='7a8b9deb4011';
+const VER='a30768a40e6a';
 const $=s=>document.querySelector(s);
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
 const ALPH='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -86,7 +86,7 @@ const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platfor
 const isStandalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
 const inApp=()=>/FBAN|FBAV|Instagram|Messenger|Snapchat|TikTok|Line\//i.test(navigator.userAgent);
 async function copy(t){try{await navigator.clipboard.writeText(t);return true}catch(e){return false}}
-window.MQL={newCode,normCode,prettyCode,newPid,hash,copy,isIOS,isStandalone};
+window.MQL={newCode,normCode,prettyCode,newPid,hash,copy,isIOS,isStandalone,ver:VER};
 // fb.js (Firebase) wczytuję dopiero, gdy jest potrzebny: na ekranie kodu od razu, w apce przy pierwszym użyciu chmury.
 // Wcześniej wykonywał się przy każdym starcie przed apką i blokował pierwszy obraz
 async function fbWait(){if(window.__fbL)window.__fbL();await window.__fbP;if(!window.MQFB){const x=new Error('net');x.net=true;throw x}}
