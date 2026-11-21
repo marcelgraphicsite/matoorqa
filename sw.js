@@ -1,16 +1,18 @@
-const C='mq-88d473cb5a6b';
+const C='mq-3c452f0e688d';
 // skorupa apki (z tą samą wersją co sw.js): pobierana w tle przy instalacji, potem podawana od razu z pamięci,
 // więc start nie czeka na sieć. Nowa wersja instaluje się w tle przy wejściu i działa od następnego otwarcia.
-const CORE=['index.html?v=88d473cb5a6b','app.bin?v=88d473cb5a6b','fb.js?v=88d473cb5a6b','manifest.webmanifest','icons/icon-192.png','icons/apple-touch-icon.png','icons/badge-96.png'];
-const AC='mq-ark-1',FC='mq-font-1';
+const CORE=['index.html?v=3c452f0e688d','app.bin?v=3c452f0e688d','fb.js?v=3c452f0e688d','manifest.webmanifest','icons/icon-192.png','icons/apple-touch-icon.png','icons/badge-96.png'];
+const AC='mq-ark-1',FC='mq-font-1',XC='mq-snd-1';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE.map(u=>new Request(u,{cache:'reload'})))).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C&&k!==AC&&k!==FC).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C&&k!==AC&&k!==FC&&k!==XC).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 const fromCache=(name,r)=>caches.open(name).then(c=>c.match(r,{ignoreSearch:true}).then(m=>m||fetch(r).then(res=>{if(res&&res.ok)c.put(r,res.clone());return res})));
 const shell=u=>/\/(?:app\.bin|fb\.js|manifest\.webmanifest)$/.test(u.pathname)||/\/icons\/[^/]+$/.test(u.pathname);
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==location.origin)return;
   if(u.pathname.includes('/tts/'))return; // nagrania lektora: przeglądarka sama obsługuje zakresy (Range), Safari tego wymaga
   if(/\/ark\/[a-z0-9]+\/(?:k\/)?\d+\.webp$/.test(u.pathname)||/\/geo\/[a-z0-9-]+\.webp$/.test(u.pathname)){e.respondWith(fromCache(AC,r));return}
   if(/\/fonts\/[a-z0-9-]+\.woff2$/.test(u.pathname)){e.respondWith(fromCache(FC,r));return}
+  // efekty dźwiękowe: nazwa pliku zawiera wersję, więc raz pobrany plik jest dobry na zawsze
+  if(/\/snd\/fx-[a-f0-9]+\.mp3$/.test(u.pathname)){e.respondWith(fromCache(XC,r));return}
   if(r.mode==='navigate'){e.respondWith(caches.open(C).then(c=>c.match('index.html',{ignoreSearch:true})).then(m=>m||net(r)));return}
   if(shell(u)){e.respondWith(caches.open(C).then(c=>c.match(r,{ignoreSearch:true})).then(m=>m||net(r)));return}
   e.respondWith(net(r))});
