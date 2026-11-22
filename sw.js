@@ -1,7 +1,7 @@
-const C='mq-47fee9a2dcdf';
+const C='mq-2cadf3cd6020';
 // skorupa apki (z tą samą wersją co sw.js): pobierana w tle przy instalacji, potem podawana od razu z pamięci,
 // więc start nie czeka na sieć. Nowa wersja instaluje się w tle przy wejściu i działa od następnego otwarcia.
-const CORE=['index.html?v=47fee9a2dcdf','app.bin?v=47fee9a2dcdf','fb.js?v=47fee9a2dcdf','manifest.webmanifest','icons/icon-192.png','icons/apple-touch-icon.png','icons/badge-96.png'];
+const CORE=['index.html?v=2cadf3cd6020','app.bin?v=2cadf3cd6020','fb.js?v=2cadf3cd6020','manifest.webmanifest','icons/icon-192.png','icons/apple-touch-icon.png','icons/badge-96.png'];
 const AC='mq-ark-1',FC='mq-font-1',XC='mq-snd-1';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE.map(u=>new Request(u,{cache:'reload'})))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C&&k!==AC&&k!==FC&&k!==XC).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
