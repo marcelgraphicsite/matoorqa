@@ -138,8 +138,10 @@ export function events(p, soc, st, my, ctx) {
     const mark = key => { const n = Object.assign({}, seen, { [key]: day }); for (const k of Object.keys(n)) if (n[k] < day - 30) delete n[k]; return n; };
     for (const k in soc) {
       if (ev) break; if (k === p) continue; const x = soc[k];
+      // konto prywatne: tylko zaproszenie od właściciela apki, bez zespołów
+      if (me.pr && k !== ctx.adm) continue;
       if (arr(x.rq).includes(p) && !arr(me.fr).includes(k) && !(me.rx || {})[k] && !seen['f' + k]) ev = { t: `@${x.h} chce dodać cię do znajomych`, b: 'Przyjmij w apce, a zobaczycie się w lidze.', u: '#znajomi', g: 'soc', set: { sq: mark('f' + k) } };
-      else if (x.tm && x.tm.n && arr(x.tm.inv).includes(p) && me.tj !== k && !(me.tx || {})[k] && !seen['t' + k]) ev = { t: `Zaproszenie do zespołu „${x.tm.n}”`, b: `Od @${x.h}${x.tm.sc ? ' · ' + x.tm.sc : ''}. Dołącz w apce.`, u: '#znajomi', g: 'soc', set: { sq: mark('t' + k) } };
+      else if (!me.pr && x.tm && x.tm.n && arr(x.tm.inv).includes(p) && me.tj !== k && !(me.tx || {})[k] && !seen['t' + k]) ev = { t: `Zaproszenie do zespołu „${x.tm.n}”`, b: `Od @${x.h}${x.tm.sc ? ' · ' + x.tm.sc : ''}. Dołącz w apce.`, u: '#znajomi', g: 'soc', set: { sq: mark('t' + k) } };
       else if (me.tm && me.tm.n && x.tq === p && !arr(me.tm.m).includes(k) && !(me.tm.rj || {})[k] && !seen['j' + k]) ev = { t: `@${x.h} chce dołączyć do zespołu`, b: `${me.tm.n}: przyjmij albo odrzuć w apce.`, u: '#znajomi', g: 'soc', set: { sq: mark('j' + k) } };
       else if (arr(me.rq).includes(k) && arr(x.fr).includes(p) && !seen['a' + k]) ev = { t: `@${x.h} przyjmuje zaproszenie`, b: 'Jesteście znajomymi. Sprawdź, kto prowadzi w lidze.', u: '#znajomi', g: 'soc', set: { sq: mark('a' + k) } };
     }
